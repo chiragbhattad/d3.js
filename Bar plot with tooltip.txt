@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!--CSS styling of the Bar and Line graph -->
+<style>
+
+body{
+background-color: #D3D3D3;
+}
+
+
+.line {
+  fill: orangered;
+  stroke-width: 5px;
+}
+
+.bar {
+  fill: steelblue;
+  stroke: Black;
+}
+
+.bar:hover {
+  fill: steelblue;
+  stroke: black;
+  stroke-width: 2px;
+}
+
+.axis--x path {
+  display: none;
+}
+
+h2{
+  font: Arial black;
+  color: Brown;
+  text-indent: 430px;
+  text-decoration: underline;  
+}
+
+div.tooltip {
+  position: absolute;
+  text-align: center;
+  text: red;
+  width: 100px;
+  height: 28px;
+  padding: 2px;
+  font: 12 px Arial;
+  background: #C0C0C0;
+  border: 1px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+</style>
+
+<h2> Interactive Bar Graph </h2>
+
+<!--Change this to change the size of the plot-->
+<svg width="1060" height="600"></svg>  
+
+<!-- Loading D3 JavaScript library -->
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+<script>
+
+var svg = d3.select("svg"),
+<!-- Change this to change the position of the Plot inside the SVG Canvas -->
+    margin = {top: 30, right: 20, bottom: 20, left: 30},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom;
+
+<!-- Padding is the distance between two simultaneous bars -->
+<!-- The x and y range on the axes -->
+var x = d3.scaleBand().rangeRound([0, width]).padding(0.1), 
+    y = d3.scaleLinear().rangeRound([height, 0]);
+
+<!-- defining a variable for the line graph -->
+var line = d3.line()
+    .x(function(d) { return x(d.letter) + 15; })
+    .y(function(d) { return y(d.frequency); });
+
+<!-- introducing a variable which will help in appending the axes and the axes titles -->
+var g = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+<!-- introducing a variable for the tooltip -->
+var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+<!-- Loading data -->
+d3.csv("data.csv", function(d) {
+<!-- d3 loads every variable as string. Hence it needs to be informed of data of other data types so that data manipulation can be done without anomalies -->  
+  d.frequency = +d.frequency;
+  return d;
+}, function(error, data) {
+  if (error) throw error;
+
+<!-- Letters on the X-axis -->
+  x.domain(data.map(function(d) { return d.letter; })); 
+  y.domain([0, d3.max(data, function(d) { return d.frequency; })])
+
+<!-- appending the X Axis -->
+  g.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")") 
+      .call(d3.axisBottom(x));
+
+<!-- appending the Y Axis with an axis title -->
+  g.append("g")
+      .call(d3.axisLeft(y))
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("frequency (%)");
+
+<!-- appending the bar graph in the svg canvas -->
+  g.selectAll(".bar")
+    .data(data)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("opacity", 0.7)
+      .attr("x", function(d) { return x(d.letter); })
+      .attr("y", function(d) { return y(d.frequency);})
+      .attr("width", x.bandwidth())
+<!-- Keeps the bars pointed upwards -->
+      .attr("height", function(d) { return height - y(d.frequency); })
+<!-- Integrating tooltip with the bar plot -->
+      .on("mouseover", function(d) {
+<!-- Introducing the zooming function on hover -->
+d3.select(this).transition()
+	.duration(500)
+	.attr("x", function(d) { return x(d.letter); })
+	.attr("y", function(d) { return (y(d.frequency)-20); })
+	.attr("width", (x.bandwidth()))
+	.attr("height", function(d) { return (height - y(d.frequency)+20) })
+	.attr("opacity", 1)
+<!-- Appending the tooltip on hover -->
+	div.transition()
+	  .duration(500)
+	  .style("opacity", 0.9);
+           div.html(d.letter + ": " + d.frequency)
+	.style("left", x(d.letter) + "px")
+	.style("top", y(d.frequency) + "px");
+      })
+      .on("mouseout", function(d) {
+<!-- Bringing the bar back to its normal dimensions after the mouse hovers out -->
+d3.select(this).transition().duration(500)
+	 .attr("width", x.bandwidth())
+	 .attr("height", function(d) { return height - y(d.frequency) })
+   	 .attr("x", function(d) { return x(d.letter); })
+      	 .attr("y", function(d) { return y(d.frequency); })
+	 .style("opacity", 0.7);
+<!-- Removing the Tooltip when the mouse hovers out -->
+	div.transition()
+	  .duration(200)
+	  .style("opacity", 0);
+
+      });
+
+<!-- Appending the line graph onto the svg canvas -->
+  g.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "orangered")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line);
+
+});
+
+</script>
